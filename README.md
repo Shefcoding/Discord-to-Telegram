@@ -17,3 +17,6 @@ One line represents the source chats (in the first brackets) in which messages w
 The file may contain any number of such lines, but repeating one destination for the same source can result in repeated messages.
 
 6. Execute the Program.cs file
+--
+
+The following fork now reads messages from a discord channel and gets the contract address of an EVM wallet and sends it to a TG channel
