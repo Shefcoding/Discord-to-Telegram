@@ -1,4 +1,4 @@
-using Telegram.Bot;
+﻿using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -61,6 +61,8 @@ public class TelegramBot
 
     public async Task ForwardMessageAsync(string destinationChatName, Discord.WebSocket.SocketMessage message)
     {
+
+        Console.WriteLine($"forwarded message {message.Channel.Name}: {message.Content}");
         // selects appropriate destination chat from current chats based on provided name
         // firstly searches for the identical name, if there's no such, then searches for similar one
         var destinationChat = currentChats
@@ -111,15 +113,26 @@ public class TelegramBot
 
     private async Task SendMessageAndAddToDictionary(Data.Models.Chat srcChat, Data.Models.Chat destChat, Discord.WebSocket.SocketMessage discordMessage)
     {
+        string pattern = @"0x[a-fA-F0-9]+";
 
+        Match match = Regex.Match(discordMessage.Content, pattern);
+        var msg = "";
+        if (match != null)
+        {
+             msg = $"<code>{match.Value}</code>";
+        }
+        else
+        {
+            msg = $"<code>{discordMessage.Content}</code>";
+        }
         if (!string.IsNullOrWhiteSpace(discordMessage.Content))
         {
             var sentMessage = await client.SendTextMessageAsync(
                 chatId: new ChatId((long)destChat.Id),
-                text: discordMessage.Content,
-                cancellationToken: cts.Token
+                text: msg,
+                cancellationToken: cts.Token,
+                parseMode: ParseMode.Html
             );
-
             AddMessageToDictionary(srcChat, destChat, discordMessage, sentMessage);
         }
 

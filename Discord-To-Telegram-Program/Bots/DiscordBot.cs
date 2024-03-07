@@ -1,9 +1,10 @@
-
+﻿
 using Discord;
 using Discord.WebSocket;
 using DiscordToTelegram.Data.Models;
 using DiscordToTelegram.Data.Services;
 using DiscordToTelegram.Bots.Services;
+using System.Text.RegularExpressions;
 
 namespace DiscordToTelegram.Bots;
 public class DiscordBot
@@ -25,7 +26,11 @@ public class DiscordBot
 
     public async Task StartAsync()
     {
-        var config = new DiscordSocketConfig { MessageCacheSize = 100 };
+        var config = new DiscordSocketConfig
+        {
+            MessageCacheSize = 100,
+            GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
+        };
         client = new DiscordSocketClient(config);
 
         client.Log += Log;
@@ -49,13 +54,39 @@ public class DiscordBot
 
     private async Task MessageReceived(SocketMessage receivedMessage)
     {
+        Console.WriteLine($"Message received in channel {receivedMessage.Channel.Name}: {receivedMessage.Content}");
+        Console.WriteLine("Forwarding options count: " + forwardOptions.Count);
 
-        forwardOptions
-            .Where(option => option.Sources.Any
-                (source => receivedMessage.Channel.Name.Contains(source)))
-            .SelectMany(option => option.Destinations)
-            .ToList()
-            .ForEach(destination => sender.ForwardMessageAsync(destination, receivedMessage));
+
+        foreach (var option in forwardOptions)
+        {
+            Console.WriteLine("Checking source: " + string.Join(", ", option.Sources));
+            if (option.Sources.Any(source => receivedMessage.Channel.Name.Contains(source)))
+            {
+                Console.WriteLine("Source matched. Forwarding to destinations: " + string.Join(", ", option.Destinations));
+                option.Destinations.ForEach(destination => Console.WriteLine("Destination: " + destination));
+            }
+        }
+
+
+        //forwardOptions
+        //    .Where(option => option.Sources.Any
+        //        (source => receivedMessage.Channel.Name.Contains(source)))
+        //    .SelectMany(option => option.Destinations)
+        //    .ToList()
+        //    .ForEach(destination => sender.ForwardMessageAsync(destination, receivedMessage));
+
+        var destinations = forwardOptions
+           .Where(option => option.Sources.Any(source => receivedMessage.Channel.Name.Contains(source)))
+           .SelectMany(option => option.Destinations)
+           .ToList();
+
+        Console.WriteLine($"Destinations count: {destinations.Count}");
+        foreach (var destination in destinations)
+        {
+            Console.WriteLine($"Forwarding to destination: {destination}");
+            await sender.ForwardMessageAsync(destination, receivedMessage);
+        }
 
         var chat = new Chat(receivedMessage.Channel.Id, receivedMessage.Channel.Name);
         if (!currentChats.Contains(chat))
